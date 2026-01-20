@@ -127,3 +127,58 @@ export const postCartItem = async (req, res) => {
     });
   }
 };
+
+export const putCartItem = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { quantity, deliveryOptionId } = req.body;
+
+    // Find the cart item
+    const cartItem = await models.CartItem.findOne({
+      where: { productId }
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Cart item not found'
+      });
+    }
+
+    // Validate quantity if provided
+    if (quantity !== undefined) {
+      const qty = parseInt(quantity);
+      if (isNaN(qty) || qty < 1 || qty > 10) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Quantity must be a number between 1 and 10'
+        });
+      }
+      cartItem.quantity = qty;
+    }
+
+    // Validate deliveryOptionId if provided
+    if (deliveryOptionId !== undefined) {
+      const deliveryOption = await models.DeliveryOption.findByPk(deliveryOptionId);
+      if (!deliveryOption) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid delivery option'
+        });
+      }
+      cartItem.deliveryOptionId = deliveryOptionId;
+    }
+
+    // Save the updated cart item
+    await cartItem.save();
+
+    res.status(200).json({
+      data: cartItem
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update cart item'
+    });
+  }
+};
