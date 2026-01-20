@@ -263,6 +263,59 @@ export const getOrders = async (req, res) => {
   }
 };
 
+export const getOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await models.Order.findByPk(orderId);
+    
+    if (!order) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Order not found'
+      });
+    }
+    
+    if (req.query.expand === 'products') {
+      // Collect all productIds from the order
+      const productIds = order.products.map(product => product.productId);
+      
+      // Fetch all products
+      const products = await models.Product.findAll({
+        where: { id: productIds }
+      });
+      
+      // Create product map
+      const productMap = products.reduce((map, product) => {
+        map[product.id] = product;
+        return map;
+      }, {});
+      
+      // Expand order with product details
+      const expandedOrder = {
+        ...order.toJSON(),
+        products: order.products.map(product => ({
+          ...product,
+          productDetails: productMap[product.productId]
+        }))
+      };
+      
+      res.status(200).json({
+        data: expandedOrder
+      });
+    } else {
+      res.status(200).json({
+        data: order
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch order'
+    });
+  }
+};
+
 export const postOrder = async (req, res) => {
   try {
     const { cart } = req.body;
