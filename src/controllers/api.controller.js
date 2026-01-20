@@ -67,3 +67,63 @@ export const getCartItems = async (req, res) => {
     });
   }
 };
+
+export const postCartItem = async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+
+    // Validate input
+    if (!productId || !quantity) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'productId and quantity are required'
+      });
+    }
+
+    // Check if quantity is a valid number between 1 and 10
+    const qty = parseInt(quantity);
+    if (isNaN(qty) || qty < 1 || qty > 10) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Quantity must be a number between 1 and 10'
+      });
+    }
+
+    // Check if product exists
+    const product = await models.Product.findByPk(productId);
+    if (!product) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Product not found'
+      });
+    }
+
+    // Check if product already in cart
+    const existingCartItem = await models.CartItem.findOne({
+      where: { productId }
+    });
+
+    if (existingCartItem) {
+      // Increase quantity
+      existingCartItem.quantity += qty;
+      await existingCartItem.save();
+    } else {
+      // Add new cart item
+      await models.CartItem.create({
+        productId,
+        quantity: qty,
+        deliveryOptionId: "1"
+      });
+    }
+
+    // Return the product
+    res.status(201).json({
+      data: product
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to add item to cart'
+    });
+  }
+};
