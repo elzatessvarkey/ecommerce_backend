@@ -50,10 +50,10 @@ export const postCartItem = async (req, res) => {
 
     // Check if quantity is a valid number between 1 and 10
     const qty = parseInt(quantity);
-    if (isNaN(qty) || qty < 1 || qty > 10) {
+    if (isNaN(qty) || qty < 1) {
       return res.status(400).json({
         status: 'error',
-        message: 'Quantity must be a number between 1 and 10'
+        message: 'Quantity must be a number greater than 0'
       });
     }
 
@@ -116,10 +116,10 @@ export const putCartItem = async (req, res) => {
     // Validate quantity if provided
     if (quantity !== undefined) {
       const qty = parseInt(quantity);
-      if (isNaN(qty) || qty < 1 || qty > 10) {
+      if (isNaN(qty) || qty < 1) {
         return res.status(400).json({
           status: 'error',
-          message: 'Quantity must be a number between 1 and 10'
+          message: 'Quantity must be a number greater than 0'
         });
       }
       cartItem.quantity = qty;
