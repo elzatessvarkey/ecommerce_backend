@@ -182,3 +182,31 @@ export const putCartItem = async (req, res) => {
     });
   }
 };
+
+export const deleteCartItem = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    // Find the cart item
+    const cartItem = await models.CartItem.findOne({
+      where: { productId }
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Cart item not found'
+      });
+    }
+
+    // Delete the cart item
+    await cartItem.destroy();
+
+    res.status(204).send(); // No Content
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete cart item'
+    });
+  }
+};
