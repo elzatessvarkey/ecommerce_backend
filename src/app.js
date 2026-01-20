@@ -5,6 +5,7 @@ import sequelize from './config/database.js';
 import models from './models/index.js';
 import { defaultProducts } from '../defaultData/defaultProducts.js';
 import { defaultDeliveryOptions } from '../defaultData/defaultDeliveryOptions.js';
+import { defaultCartItems } from '../defaultData/defaultCartItems.js';
 
 const app = express();
 
@@ -32,6 +33,15 @@ const app = express();
       console.log('Default delivery options seeded successfully.');
     } else {
       console.log('Delivery options already exist in database.');
+    }
+
+    // Seed default cart items if none exist
+    const cartItemCount = await models.CartItem.count();
+    if (cartItemCount === 0) {
+      await models.CartItem.bulkCreate(defaultCartItems);
+      console.log('Default cart items seeded successfully.');
+    } else {
+      console.log('Cart items already exist in database.');
     }
   } catch (err) {
     console.error('Unable to connect to the database:', err);
