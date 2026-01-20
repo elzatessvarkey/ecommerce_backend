@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProducts, getDeliveryOptions, getCartItems, postCartItem, putCartItem, deleteCartItem, getOrders, getOrder, postOrder } from '../controllers/api.controller.js';
+import { getProducts, getDeliveryOptions, getCartItems, postCartItem, putCartItem, deleteCartItem, getOrders, getOrder, postOrder, resetDatabase } from '../controllers/api.controller.js';
 
 const router = express.Router();
 
@@ -12,5 +12,6 @@ router.delete('/cart-items/:productId', deleteCartItem);
 router.get('/orders', getOrders);
 router.get('/orders/:orderId', getOrder);
 router.post('/orders', postOrder);
+router.post('/reset', resetDatabase);
 
 export default router;
