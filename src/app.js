@@ -6,6 +6,7 @@ import models from './models/index.js';
 import { defaultProducts } from '../defaultData/defaultProducts.js';
 import { defaultDeliveryOptions } from '../defaultData/defaultDeliveryOptions.js';
 import { defaultCartItems } from '../defaultData/defaultCartItems.js';
+import { defaultOrders } from '../defaultData/defaultOrders.js';
 
 const app = express();
 
@@ -42,6 +43,15 @@ const app = express();
       console.log('Default cart items seeded successfully.');
     } else {
       console.log('Cart items already exist in database.');
+    }
+
+    // Seed default orders if none exist
+    const orderCount = await models.Order.count();
+    if (orderCount === 0) {
+      await models.Order.bulkCreate(defaultOrders);
+      console.log('Default orders seeded successfully.');
+    } else {
+      console.log('Orders already exist in database.');
     }
   } catch (err) {
     console.error('Unable to connect to the database:', err);

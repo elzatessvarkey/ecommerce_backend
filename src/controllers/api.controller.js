@@ -210,3 +210,54 @@ export const deleteCartItem = async (req, res) => {
     });
   }
 };
+
+export const getOrders = async (req, res) => {
+  try {
+    const orders = await models.Order.findAll();
+    
+    if (req.query.expand === 'products') {
+      // Collect all productIds from all orders
+      const allProductIds = [];
+      orders.forEach(order => {
+        order.products.forEach(product => {
+          if (!allProductIds.includes(product.productId)) {
+            allProductIds.push(product.productId);
+          }
+        });
+      });
+      
+      // Fetch all products
+      const products = await models.Product.findAll({
+        where: { id: allProductIds }
+      });
+      
+      // Create product map
+      const productMap = products.reduce((map, product) => {
+        map[product.id] = product;
+        return map;
+      }, {});
+      
+      // Expand orders with product details
+      const expandedOrders = orders.map(order => ({
+        ...order.toJSON(),
+        products: order.products.map(product => ({
+          ...product,
+          productDetails: productMap[product.productId]
+        }))
+      }));
+      
+      res.status(200).json({
+        data: expandedOrders
+      });
+    } else {
+      res.status(200).json({
+        data: orders
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch orders'
+    });
+  }
+};
