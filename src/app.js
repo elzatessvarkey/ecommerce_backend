@@ -26,7 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/images', express.static('images'));
 
 // Routes
-app.use(apiRoutes);
+app.use('/api', apiRoutes);
 
 // 404 Handler
 app.use((req, res) => {

@@ -3,7 +3,9 @@ import models from '../models/index.js';
 
 export const getOrders = async (req, res) => {
   try {
-    const orders = await models.Order.findAll();
+    const orders = await models.Order.findAll({
+      order: [['orderTimeMs', 'DESC']]
+    });
 
     if (req.query.expand === 'products') {
       // Collect all productIds from all orders
@@ -107,66 +109,70 @@ export const getOrder = async (req, res) => {
 
 export const postOrder = async (req, res) => {
   try {
-    const { cart } = req.body;
+    // Get cart items from database instead of request body
+    const cartItems = await models.CartItem.findAll();
 
     // Validate cart
-    if (!cart || !Array.isArray(cart) || cart.length === 0) {
+    if (cartItems.length === 0) {
       return res.status(400).json({
         status: 'error',
-        message: 'Cart is required and must be a non-empty array'
+        message: 'Cart is empty'
       });
     }
 
     let totalCostCents = 0;
     const orderProducts = [];
 
+    // Get all product IDs and delivery option IDs
+    const productIds = cartItems.map(item => item.productId);
+    const deliveryOptionIds = [...new Set(cartItems.map(item => item.deliveryOptionId))];
+
+    // Fetch products and delivery options
+    const [products, deliveryOptions] = await Promise.all([
+      models.Product.findAll({ where: { id: productIds } }),
+      models.DeliveryOption.findAll({ where: { id: deliveryOptionIds } })
+    ]);
+
+    // Create lookup maps
+    const productMap = products.reduce((map, product) => {
+      map[product.id] = product;
+      return map;
+    }, {});
+
+    const deliveryOptionMap = deliveryOptions.reduce((map, option) => {
+      map[option.id] = option;
+      return map;
+    }, {});
+
     // Validate each cart item and calculate costs
-    for (const item of cart) {
-      const { productId, quantity, deliveryOptionId } = item;
+    for (const item of cartItems) {
+      const product = productMap[item.productId];
+      const deliveryOption = deliveryOptionMap[item.deliveryOptionId];
 
-      if (!productId || !quantity || !deliveryOptionId) {
-        return res.status(400).json({
-          status: 'error',
-          message: 'Each cart item must have productId, quantity, and deliveryOptionId'
-        });
-      }
-
-      const qty = parseInt(quantity);
-      if (isNaN(qty) || qty <= 0) {
-        return res.status(400).json({
-          status: 'error',
-          message: 'Quantity must be a positive number'
-        });
-      }
-
-      // Check if product exists
-      const product = await models.Product.findByPk(productId);
       if (!product) {
         return res.status(400).json({
           status: 'error',
-          message: `Product ${productId} not found`
+          message: `Product ${item.productId} not found`
         });
       }
 
-      // Check if delivery option exists
-      const deliveryOption = await models.DeliveryOption.findByPk(deliveryOptionId);
       if (!deliveryOption) {
         return res.status(400).json({
           status: 'error',
-          message: `Delivery option ${deliveryOptionId} not found`
+          message: `Delivery option ${item.deliveryOptionId} not found`
         });
       }
 
       // Calculate item cost: product price * quantity + shipping
-      const itemCost = product.priceCents * qty + deliveryOption.priceCents;
+      const itemCost = product.priceCents * item.quantity + deliveryOption.priceCents;
       totalCostCents += itemCost;
 
       // Calculate estimated delivery time
       const estimatedDeliveryTimeMs = Date.now() + (deliveryOption.deliveryDays * 24 * 60 * 60 * 1000);
 
       orderProducts.push({
-        productId,
-        quantity: qty,
+        productId: item.productId,
+        quantity: item.quantity,
         estimatedDeliveryTimeMs
       });
     }
