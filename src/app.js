@@ -4,6 +4,7 @@ import errorHandler from './middlewares/error.middleware.js';
 import sequelize from './config/database.js';
 import models from './models/index.js';
 import { defaultProducts } from '../defaultData/defaultProducts.js';
+import { defaultDeliveryOptions } from '../defaultData/defaultDeliveryOptions.js';
 
 const app = express();
 
@@ -22,6 +23,15 @@ const app = express();
       console.log('Default products seeded successfully.');
     } else {
       console.log('Products already exist in database.');
+    }
+
+    // Seed default delivery options if none exist
+    const deliveryOptionCount = await models.DeliveryOption.count();
+    if (deliveryOptionCount === 0) {
+      await models.DeliveryOption.bulkCreate(defaultDeliveryOptions);
+      console.log('Default delivery options seeded successfully.');
+    } else {
+      console.log('Delivery options already exist in database.');
     }
   } catch (err) {
     console.error('Unable to connect to the database:', err);

@@ -1,9 +1,9 @@
 import express from 'express';
-import { healthCheck, getProducts } from '../controllers/api.controller.js';
+import { getProducts, getDeliveryOptions } from '../controllers/api.controller.js';
 
 const router = express.Router();
 
-router.get('/health', healthCheck);
 router.get('/products', getProducts);
+router.get('/delivery-options', getDeliveryOptions);
 
 export default router;

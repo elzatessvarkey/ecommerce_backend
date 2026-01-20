@@ -1,12 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-
-export const healthCheck = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'API is running'
-  });
-};
+import models from '../models/index.js';
 
 export const getProducts = (req, res) => {
   try {
@@ -20,6 +14,20 @@ export const getProducts = (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch products'
+    });
+  }
+};
+
+export const getDeliveryOptions = async (req, res) => {
+  try {
+    const deliveryOptions = await models.DeliveryOption.findAll();
+    res.status(200).json({
+      data: deliveryOptions
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch delivery options'
     });
   }
 };
