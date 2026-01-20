@@ -1,0 +1,180 @@
+import models from '../models/index.js';
+
+export const getCartItems = async (req, res) => {
+  try {
+    const cartItems = await models.CartItem.findAll();
+
+    if (req.query.expand === 'product') {
+      const productIds = cartItems.map(item => item.productId);
+      const products = await models.Product.findAll({
+        where: { id: productIds }
+      });
+
+      const productMap = products.reduce((map, product) => {
+        map[product.id] = product;
+        return map;
+      }, {});
+
+      const expandedCartItems = cartItems.map(item => ({
+        ...item.toJSON(),
+        product: productMap[item.productId]
+      }));
+
+      res.status(200).json({
+        data: expandedCartItems
+      });
+    } else {
+      res.status(200).json({
+        data: cartItems
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch cart items'
+    });
+  }
+};
+
+export const postCartItem = async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+
+    // Validate input
+    if (!productId || !quantity) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'productId and quantity are required'
+      });
+    }
+
+    // Check if quantity is a valid number between 1 and 10
+    const qty = parseInt(quantity);
+    if (isNaN(qty) || qty < 1 || qty > 10) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Quantity must be a number between 1 and 10'
+      });
+    }
+
+    // Check if product exists
+    const product = await models.Product.findByPk(productId);
+    if (!product) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Product not found'
+      });
+    }
+
+    // Check if product already in cart
+    const existingCartItem = await models.CartItem.findOne({
+      where: { productId }
+    });
+
+    if (existingCartItem) {
+      // Increase quantity
+      existingCartItem.quantity += qty;
+      await existingCartItem.save();
+    } else {
+      // Add new cart item
+      await models.CartItem.create({
+        productId,
+        quantity: qty,
+        deliveryOptionId: "1"
+      });
+    }
+
+    // Return the product
+    res.status(201).json({
+      data: product
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to add item to cart'
+    });
+  }
+};
+
+export const putCartItem = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { quantity, deliveryOptionId } = req.body;
+
+    // Find the cart item
+    const cartItem = await models.CartItem.findOne({
+      where: { productId }
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Cart item not found'
+      });
+    }
+
+    // Validate quantity if provided
+    if (quantity !== undefined) {
+      const qty = parseInt(quantity);
+      if (isNaN(qty) || qty < 1 || qty > 10) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Quantity must be a number between 1 and 10'
+        });
+      }
+      cartItem.quantity = qty;
+    }
+
+    // Validate deliveryOptionId if provided
+    if (deliveryOptionId !== undefined) {
+      const deliveryOption = await models.DeliveryOption.findByPk(deliveryOptionId);
+      if (!deliveryOption) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid delivery option'
+        });
+      }
+      cartItem.deliveryOptionId = deliveryOptionId;
+    }
+
+    // Save the updated cart item
+    await cartItem.save();
+
+    res.status(200).json({
+      data: cartItem
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update cart item'
+    });
+  }
+};
+
+export const deleteCartItem = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    // Find the cart item
+    const cartItem = await models.CartItem.findOne({
+      where: { productId }
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Cart item not found'
+      });
+    }
+
+    // Delete the cart item
+    await cartItem.destroy();
+
+    res.status(204).send(); // No Content
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete cart item'
+    });
+  }
+};

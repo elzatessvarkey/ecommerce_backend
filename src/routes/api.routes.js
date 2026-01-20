@@ -1,5 +1,9 @@
 import express from 'express';
-import { getProducts, getDeliveryOptions, getCartItems, postCartItem, putCartItem, deleteCartItem, getOrders, getOrder, postOrder, resetDatabase } from '../controllers/api.controller.js';
+import { getProducts } from '../controllers/product.controller.js';
+import { getDeliveryOptions } from '../controllers/delivery.controller.js';
+import { getCartItems, postCartItem, putCartItem, deleteCartItem } from '../controllers/cart.controller.js';
+import { getOrders, getOrder, postOrder } from '../controllers/order.controller.js';
+import { resetDatabase } from '../controllers/utility.controller.js';
 
 const router = express.Router();
 
