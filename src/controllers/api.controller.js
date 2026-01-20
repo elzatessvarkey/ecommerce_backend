@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import models from '../models/index.js';
 
 export const getProducts = (req, res) => {
@@ -258,6 +259,100 @@ export const getOrders = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch orders'
+    });
+  }
+};
+
+export const postOrder = async (req, res) => {
+  try {
+    const { cart } = req.body;
+
+    // Validate cart
+    if (!cart || !Array.isArray(cart) || cart.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Cart is required and must be a non-empty array'
+      });
+    }
+
+    let totalCostCents = 0;
+    const orderProducts = [];
+
+    // Validate each cart item and calculate costs
+    for (const item of cart) {
+      const { productId, quantity, deliveryOptionId } = item;
+
+      if (!productId || !quantity || !deliveryOptionId) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Each cart item must have productId, quantity, and deliveryOptionId'
+        });
+      }
+
+      const qty = parseInt(quantity);
+      if (isNaN(qty) || qty <= 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Quantity must be a positive number'
+        });
+      }
+
+      // Check if product exists
+      const product = await models.Product.findByPk(productId);
+      if (!product) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Product ${productId} not found`
+        });
+      }
+
+      // Check if delivery option exists
+      const deliveryOption = await models.DeliveryOption.findByPk(deliveryOptionId);
+      if (!deliveryOption) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Delivery option ${deliveryOptionId} not found`
+        });
+      }
+
+      // Calculate item cost: product price * quantity + shipping
+      const itemCost = product.priceCents * qty + deliveryOption.priceCents;
+      totalCostCents += itemCost;
+
+      // Calculate estimated delivery time
+      const estimatedDeliveryTimeMs = Date.now() + (deliveryOption.deliveryDays * 24 * 60 * 60 * 1000);
+
+      orderProducts.push({
+        productId,
+        quantity: qty,
+        estimatedDeliveryTimeMs
+      });
+    }
+
+    // Apply 10% tax
+    totalCostCents = Math.round(totalCostCents * 1.1);
+
+    // Generate unique order id
+    const id = crypto.randomUUID();
+
+    // Create order with generated id
+    const order = await models.Order.create({
+      id,
+      orderTimeMs: Date.now(),
+      totalCostCents,
+      products: orderProducts
+    });
+
+    // Clear the cart after successful order creation
+    await models.CartItem.destroy({ where: {} });
+
+    res.status(201).json({
+      data: order
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to create order'
     });
   }
 };
