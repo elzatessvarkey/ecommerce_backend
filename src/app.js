@@ -6,11 +6,57 @@ import models from './models/index.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { defaultProducts } from '../defaultData/defaultProducts.js';
+import { defaultDeliveryOptions } from '../defaultData/defaultDeliveryOptions.js';
+import { defaultCartItems } from '../defaultData/defaultCartItems.js';
+import { defaultOrders } from '../defaultData/defaultOrders.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// Helper function to add unique timestamps to seeded data
+const addTimestamps = (data) => {
+  const now = Date.now();
+  return data.map((item, index) => ({
+    ...item,
+    createdAt: new Date(now + index),
+    updatedAt: new Date(now + index)
+  }));
+};
+
+// Function to seed default data if database is empty
+const seedDefaultData = async () => {
+  try {
+    // Check if data already exists
+    const productCount = await models.Product.count();
+    const deliveryOptionCount = await models.DeliveryOption.count();
+    
+    if (productCount === 0 && deliveryOptionCount === 0) {
+      console.log('Database is empty. Seeding default data...');
+      
+      // Seed default data with unique timestamps
+      await models.Product.bulkCreate(addTimestamps(defaultProducts));
+      console.log('✓ Products seeded successfully.');
+      
+      await models.DeliveryOption.bulkCreate(addTimestamps(defaultDeliveryOptions));
+      console.log('✓ Delivery options seeded successfully.');
+      
+      await models.CartItem.bulkCreate(addTimestamps(defaultCartItems));
+      console.log('✓ Cart items seeded successfully.');
+      
+      await models.Order.bulkCreate(addTimestamps(defaultOrders));
+      console.log('✓ Orders seeded successfully.');
+      
+      console.log('🌱 All default data seeded successfully.');
+    } else {
+      console.log('Database already contains data. Skipping seeding.');
+    }
+  } catch (error) {
+    console.error('Error seeding default data:', error);
+  }
+};
 
 // Database connection and sync
 (async () => {
@@ -19,6 +65,9 @@ const app = express();
     console.log('Database connected successfully.');
     await sequelize.sync({ force: false }); // Set force: true to drop and recreate tables
     console.log('Database synchronized.');
+    
+    // Seed default data if database is empty
+    await seedDefaultData();
   } catch (err) {
     console.error('Unable to connect to the database:', err);
   }
