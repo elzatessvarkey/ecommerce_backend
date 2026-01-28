@@ -5,15 +5,21 @@ dotenv.config();
 
 // Check if running on AWS Elastic Beanstalk with RDS
 const isAWSEnvironment = process.env.RDS_HOSTNAME && process.env.RDS_PORT && process.env.RDS_DB_NAME;
+const dbType = process.env.DB_TYPE || 'mysql';
+const defaultPorts = {
+  mysql: 3306,
+  postgres: 5432,
+};
 
+const defaultPort = defaultPorts[dbType];
 let sequelize;
 
 if (isAWSEnvironment) {
   // AWS RDS MySQL Configuration
   sequelize = new Sequelize({
-    dialect: 'mysql',
+    dialect: dbType,
     host: process.env.RDS_HOSTNAME,
-    port: parseInt(process.env.RDS_PORT, 10),
+    port: process.env.RDS_PORT || defaultPort,
     database: process.env.RDS_DB_NAME,
     username: process.env.RDS_USERNAME,
     password: process.env.RDS_PASSWORD,
