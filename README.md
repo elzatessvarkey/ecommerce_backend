@@ -1,6 +1,6 @@
 # E-Commerce Backend API
 
-A RESTful API backend for an e-commerce platform built with Node.js, Express, and SQLite.
+A RESTful API backend for an e-commerce platform built with Node.js, Express, and supports both SQLite and AWS RDS MySQL databases.
 
 ## Features
 
@@ -14,10 +14,12 @@ A RESTful API backend for an e-commerce platform built with Node.js, Express, an
   - `?search=apparel` - finds all clothing items with "apparel" keyword
 
 ### Database Management
-- SQLite database with Sequelize ORM
+- **Dual Database Support**: Automatically switches between SQLite (local) and MySQL (AWS RDS)
+- **AWS Elastic Beanstalk Integration**: Detects RDS environment variables and connects automatically
 - Database reset and seeding endpoint
 - Automatic synchronization on startup
 - Persistent data storage
+- Connection pooling for production databases
 
 ### Product Catalog
 - 43 products across multiple categories
@@ -30,12 +32,15 @@ A RESTful API backend for an e-commerce platform built with Node.js, Express, an
 
 - **Runtime**: Node.js
 - **Framework**: Express.js 5.x
-- **Database**: SQLite3 with Sequelize ORM
+- **Databases**: SQLite3 (local) and MySQL (AWS RDS) with Sequelize ORM
 - **Search**: Fuse.js for fuzzy searching
+- **Compression**: Archiver for project backups
 - **Development**: Nodemon for hot reloading
 - **Code Quality**: ESLint
 
 ## Installation
+
+### Local Setup
 
 1. Clone the repository:
 ```bash
@@ -48,10 +53,11 @@ cd ecommerce_backend_mine
 npm install
 ```
 
-3. Create a `.env` file in the root directory:
+3. Create a `.env` file in the root directory (for local SQLite):
 ```env
 PORT=5000
 NODE_ENV=development
+DB_PATH=./database.sqlite
 ```
 
 4. Start the server:
@@ -62,6 +68,52 @@ npm run dev
 # Production mode
 npm start
 ```
+
+### AWS Elastic Beanstalk Setup
+
+1. Deploy to Elastic Beanstalk:
+```bash
+eb init
+eb create ecommerce-env
+```
+
+2. Configure RDS environment variables in Elastic Beanstalk:
+
+In your Elastic Beanstalk environment, set the following environment variables:
+
+```
+RDS_HOSTNAME=your-rds-endpoint.rds.amazonaws.com
+RDS_PORT=3306
+RDS_DB_NAME=your_database_name
+RDS_USERNAME=your_database_user
+RDS_PASSWORD=your_secure_password
+NODE_ENV=production
+PORT=5000
+```
+
+3. The application will automatically detect the RDS environment variables and connect to MySQL instead of SQLite.
+
+### Database Configuration
+
+The application automatically selects the database based on available environment variables:
+
+**Automatic Detection Logic**:
+```
+If RDS_HOSTNAME, RDS_PORT, and RDS_DB_NAME exist:
+  → Use AWS RDS MySQL
+Else:
+  → Use SQLite (local)
+```
+
+**Local Development** (SQLite):
+- No configuration needed, uses `./database.sqlite` by default
+- Ideal for rapid development and testing
+
+**Production** (AWS RDS MySQL):
+- Requires AWS RDS instance with MySQL
+- Environment variables automatically provided by Elastic Beanstalk
+- Includes connection pooling (5 max connections)
+- 60-second connection timeout for reliability
 
 ## API Endpoints
 
@@ -310,25 +362,51 @@ npm run lint:fix
 curl -X POST http://localhost:5000/api/reset
 ```
 
+### Create Project Backup
+
+Create an automated backup of your project files as a ZIP archive:
+
+```bash
+npm run zip
+```
+
+**Features**:
+- Automatically excludes `node_modules`, `database.sqlite`, and previous ZIP files
+- Includes hidden files (dotfiles)
+- Uses archiver with glob patterns for efficient file selection
+- Automatically increments backup ID (ecommerce_backend_1.zip, ecommerce_backend_2.zip, etc.)
+- Maximum compression (level 9)
+- Shows file count and archive size
+
+**ZIP Files Created**: `ecommerce_backend_1.zip`, `ecommerce_backend_2.zip`, etc.
+
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | 5000 |
-| `NODE_ENV` | Environment | development |
+| Variable | Description | Default | AWS RDS |
+|----------|-------------|---------|---------|
+| `PORT` | Server port | 5000 | Optional |
+| `NODE_ENV` | Environment | development | Recommended: production |
+| `DB_PATH` | SQLite database path | ./database.sqlite | N/A |
+| `RDS_HOSTNAME` | AWS RDS host | N/A | Required |
+| `RDS_PORT` | AWS RDS port | N/A | Required (usually 3306) |
+| `RDS_DB_NAME` | AWS RDS database name | N/A | Required |
+| `RDS_USERNAME` | AWS RDS username | N/A | Required |
+| `RDS_PASSWORD` | AWS RDS password | N/A | Required |
 
 ## Dependencies
 
 ### Production
 - `express` - Web framework
-- `sequelize` - ORM for SQLite
-- `sqlite3` - Database driver
+- `sequelize` - ORM for both SQLite and MySQL
+- `sqlite3` - SQLite database driver
+- `mysql2` - MySQL database driver (for AWS RDS)
 - `dotenv` - Environment configuration
 - `fuse.js` - Fuzzy search library
 
 ### Development
 - `nodemon` - Auto-restart on changes
 - `eslint` - Code linting
+- `archiver` - ZIP file creation
 
 ## API Response Format
 
@@ -356,12 +434,14 @@ The database includes 43 products across categories:
 - **Home**: Curtains, towels, mirrors, bedding
 - **Accessories**: Sunglasses, jewelry, hats
 
-## Author
+## License
 
-Elza Tess Varkey
+ISC
 
 ---
 
 **Base URL**: `http://localhost:5000`
 
 **API Prefix**: `/api`
+
+**Environment**: Supports local development (SQLite) and production (AWS RDS MySQL)
