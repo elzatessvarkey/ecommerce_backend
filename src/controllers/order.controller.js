@@ -3,7 +3,7 @@ import models from '../models/index.js';
 
 export const getOrders = async (req, res) => {
   try {
-    const orders = await models.Order.findAll({
+    const orders = await models.Order.unscoped().findAll({
       order: [['orderTimeMs', 'DESC']]
     });
 

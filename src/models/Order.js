@@ -19,8 +19,17 @@ const Order = sequelize.define('Order', {
     type: DataTypes.JSON,
     allowNull: false,
   },
+  createdAt: {
+    type: DataTypes.DATE(3),
+  },
+  updatedAt: {
+    type: DataTypes.DATE(3),
+  },
 }, {
   timestamps: true,
+  defaultScope: {
+    order: [['createdAt', 'ASC']]
+  }
 });
 
 export default Order;

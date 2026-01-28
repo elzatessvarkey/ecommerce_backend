@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
+import { create } from 'archiver';
 
 const Product = sequelize.define('Product', {
   id: {
@@ -27,8 +28,17 @@ const Product = sequelize.define('Product', {
     type: DataTypes.JSON,
     allowNull: false,
   },
+  createdAt: {
+    type: DataTypes.DATE(3),
+  },
+  updatedAt: {
+    type: DataTypes.DATE(3),
+  },
 }, {
   timestamps: true,
+  defaultScope: {
+    order: [['createdAt', 'ASC']]
+  }
 });
 
 export default Product;

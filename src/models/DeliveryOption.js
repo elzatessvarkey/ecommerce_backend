@@ -15,8 +15,17 @@ const DeliveryOption = sequelize.define('DeliveryOption', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  createdAt: {
+    type: DataTypes.DATE(3),
+  },
+  updatedAt: {
+    type: DataTypes.DATE(3),
+  },
 }, {
   timestamps: true,
+  defaultScope: {
+    order: [['createdAt', 'ASC']]
+  }
 });
 
 export default DeliveryOption;

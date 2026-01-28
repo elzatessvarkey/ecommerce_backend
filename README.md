@@ -13,16 +13,26 @@ A RESTful API backend for an e-commerce platform built with Node.js, Express, an
   - `?search=speeker` - fuzzy match finds "speaker" products despite typo
   - `?search=apparel` - finds all clothing items with "apparel" keyword
 
+### Frontend Integration
+- **SPA Support**: Serves frontend from `dist` folder with catch-all routing
+- **Single Page Application**: Any unmatched route returns `index.html` for client-side routing
+- **Static File Serving**: All assets (CSS, JS, images) served from dist folder
+- **Automatic fallback**: Missing frontend build returns helpful error message
+
 ### Database Management
 - **Dual Database Support**: Automatically switches between SQLite (local) and MySQL (AWS RDS)
 - **AWS Elastic Beanstalk Integration**: Detects RDS environment variables and connects automatically
-- Database reset and seeding endpoint
-- Automatic synchronization on startup
+- **PostgreSQL Support**: Also compatible with PostgreSQL databases
+- **Default Ordering**: All models automatically sort by `createdAt` ascending
+- **Millisecond Precision Timestamps**: DATE(3) type for accurate ordering
+- **Unique Timestamps on Bulk Insert**: Each seeded record gets unique timestamp based on array index
+- **Automatic Synchronization**: Database schema syncs on startup
+- **Connection Pooling**: Production-ready connection management
+- Database reset and seeding endpoint with proper timestamp handling
 - Persistent data storage
-- Connection pooling for production databases
 
 ### Product Catalog
-- 43 products across multiple categories
+- 43 products across multiple categories (including new Bluetooth Speaker)
 - Kitchen appliances, apparel, electronics, home goods, and more
 - Product ratings and reviews
 - Price information in cents
@@ -32,9 +42,10 @@ A RESTful API backend for an e-commerce platform built with Node.js, Express, an
 
 - **Runtime**: Node.js
 - **Framework**: Express.js 5.x
-- **Databases**: SQLite3 (local) and MySQL (AWS RDS) with Sequelize ORM
+- **Databases**: SQLite3 (local), MySQL (AWS RDS), and PostgreSQL with Sequelize ORM
 - **Search**: Fuse.js for fuzzy searching
 - **Compression**: Archiver for project backups
+- **Frontend**: Serves static SPA from dist folder
 - **Development**: Nodemon for hot reloading
 - **Code Quality**: ESLint
 
@@ -225,7 +236,7 @@ POST /api/orders
 POST /api/reset
 ```
 
-Drops all tables, recreates them, and seeds with default data from `defaultData/` folder.
+Drops all tables, recreates them, and seeds with default data from `defaultData/` folder with unique timestamps for proper ordering.
 
 **Response**:
 ```json
@@ -233,6 +244,18 @@ Drops all tables, recreates them, and seeds with default data from `defaultData/
   "status": "success",
   "message": "Database reset and seeded successfully"
 }
+```
+
+### Frontend Routes
+
+Any unmatched GET route will serve `dist/index.html` for single-page application (SPA) support.
+
+**Example Routes**:
+```http
+GET /          # Serves index.html
+GET /products  # Serves index.html (SPA routing)
+GET /checkout  # Serves index.html (SPA routing)
+GET /cart      # Serves index.html (SPA routing)
 ```
 
 ## Project Structure
@@ -282,6 +305,11 @@ ecommerce_backend_mine/
 
 ## Data Models
 
+All models include:
+- `createdAt` - Timestamp with millisecond precision (DATE(3))
+- `updatedAt` - Timestamp with millisecond precision (DATE(3))
+- **Default Ordering**: Results automatically sorted by `createdAt` ascending
+
 ### Product
 ```javascript
 {
@@ -293,7 +321,9 @@ ecommerce_backend_mine/
     count: Number
   },
   priceCents: Integer,
-  keywords: Array<String>
+  keywords: Array<String>,
+  createdAt: Date (with millisecond precision),
+  updatedAt: Date (with millisecond precision)
 }
 ```
 
@@ -301,7 +331,10 @@ ecommerce_backend_mine/
 ```javascript
 {
   productId: String,
-  quantity: Integer
+  quantity: Integer,
+  deliveryOptionId: String,
+  createdAt: Date (with millisecond precision),
+  updatedAt: Date (with millisecond precision)
 }
 ```
 
@@ -309,9 +342,11 @@ ecommerce_backend_mine/
 ```javascript
 {
   id: String (UUID),
-  orderTime: String,
+  orderTimeMs: BigInt,
   totalCostCents: Integer,
-  products: Array
+  products: Array,
+  createdAt: Date (with millisecond precision),
+  updatedAt: Date (with millisecond precision)
 }
 ```
 
@@ -320,9 +355,34 @@ ecommerce_backend_mine/
 {
   id: String,
   deliveryDays: Integer,
-  priceCents: Integer
+  priceCents: Integer,
+  createdAt: Date (with millisecond precision),
+  updatedAt: Date (with millisecond precision)
 }
 ```
+
+## Ordering & Sorting
+
+All models use **Sequelize default scopes** to automatically sort by `createdAt` in ascending order:
+
+```javascript
+defaultScope: {
+  order: [['createdAt', 'ASC']]
+}
+```
+
+This means:
+- Every `findAll()` query returns results sorted by creation time
+- No need to specify `order` in individual queries
+- Consistent ordering across all endpoints
+- Can be overridden per-query if needed
+
+## Timestamp Precision
+
+All timestamp fields use `DATE(3)` type for millisecond precision:
+- `createdAt` - Records creation time
+- `updatedAt` - Records last modification time
+- Database seed automatically adds unique timestamps based on array index for proper ordering
 
 ## Search Implementation
 
